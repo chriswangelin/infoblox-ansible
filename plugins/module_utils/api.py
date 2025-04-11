@@ -542,18 +542,19 @@ class WapiModule(WapiBase):
                     if ib_obj_type in (NIOS_IPV4_NETWORK_CONTAINER, NIOS_IPV6_NETWORK_CONTAINER):
                         proposed_object.pop('network')
                     result['changed'] = True
-                if not self.module.check_mode and res is None:
-                    proposed_object = self.on_update(proposed_object, ib_spec)
-                    if ib_obj_type == NIOS_HOST_RECORD and 'ipv4addrs' in proposed_object:
-                        # Remove 'use_for_ea_inheritance' from each dictionary in 'ipv4addrs'
-                        update_proposed = copy.deepcopy(proposed_object)
-                        update_proposed['ipv4addrs'] = [
-                            {k: v for k, v in addr.items() if k != 'use_for_ea_inheritance'}
-                            for addr in proposed_object['ipv4addrs']
-                        ]
-                        res = self.update_object(ref, update_proposed)
-                    else:
-                        res = self.update_object(ref, proposed_object)
+                if res is None:
+                    if not self.module.check_mode:
+                        proposed_object = self.on_update(proposed_object, ib_spec)
+                        if ib_obj_type == NIOS_HOST_RECORD and 'ipv4addrs' in proposed_object:
+                            # Remove 'use_for_ea_inheritance' from each dictionary in 'ipv4addrs'
+                            update_proposed = copy.deepcopy(proposed_object)
+                            update_proposed['ipv4addrs'] = [
+                                {k: v for k, v in addr.items() if k != 'use_for_ea_inheritance'}
+                                for addr in proposed_object['ipv4addrs']
+                            ]
+                            res = self.update_object(ref, update_proposed)
+                        else:
+                            res = self.update_object(ref, proposed_object)
                     result['changed'] = True
 
                     if ib_obj_type == NIOS_HOST_RECORD and res:
@@ -568,7 +569,8 @@ class WapiModule(WapiBase):
                             for proposed in sorted_ipv4addrs:
                                 ipv4addr = proposed['ipv4addr']
                                 if ipv4addr in ref_dict and 'use_for_ea_inheritance' in proposed:
-                                    self.update_object(ref_dict[ipv4addr], {'use_for_ea_inheritance': proposed['use_for_ea_inheritance']})
+                                    if not self.module.check_mode:
+                                        self.update_object(ref_dict[ipv4addr], {'use_for_ea_inheritance': proposed['use_for_ea_inheritance']})
         elif state == 'absent':
             if ref is not None:
                 if 'ipv4addrs' in proposed_object:
